@@ -93,6 +93,28 @@
             opacity: 1;
             visibility: visible;
         }
+
+        .add-location-panel {
+            transition: transform 0.3s ease-in-out;
+            transform: translateX(-100%);
+            z-index: 50;
+        }
+
+        .add-location-panel.active {
+            transform: translateX(0);
+        }
+
+        .add-location-overlay {
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+            z-index: 47;
+        }
+
+        .add-location-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
         
         .marker-icon {
             font-size: 24px;
@@ -125,6 +147,13 @@
             position: fixed;
             bottom: 30px;
             left: 30px;
+            z-index: 35;
+        }
+
+        .add-location-button {
+            position: fixed;
+            bottom: 30px;
+            left: 100px;
             z-index: 35;
         }
         
@@ -206,12 +235,33 @@
                 left: 20px;
             }
 
+            .add-location-button {
+                bottom: 80px;
+                left: 20px;
+            }
+
             .chat-drawer-header {
                 border-radius: 12px 12px 0 0;
             }
 
             #map {
                 height: 100vh;
+            }
+
+            .settings-panel {
+                width: 100%;
+                bottom: 0;
+                top: auto;
+                left: 0;
+                border-radius: 12px 12px 0 0;
+            }
+
+            .add-location-panel {
+                width: 100%;
+                bottom: 0;
+                top: auto;
+                left: 0;
+                border-radius: 12px 12px 0 0;
             }
         }
 
@@ -233,6 +283,12 @@
                 justify-content: center;
             }
 
+            .add-location-button {
+                width: 50px;
+                height: 50px;
+                justify-content: center;
+            }
+
             .story-card {
                 width: 95vw;
                 padding: 16px;
@@ -245,10 +301,27 @@
             .settings-panel {
                 width: 100%;
             }
+
+            .add-location-panel {
+                width: 100%;
+            }
         }
 
         .scroll-smooth {
             scroll-behavior: smooth;
+        }
+
+        .form-input {
+            border-color: var(--primary-color) !important;
+        }
+
+        .form-input:focus {
+            --tw-ring-color: var(--primary-color);
+        }
+
+        textarea.form-input {
+            resize: vertical;
+            min-height: 80px;
         }
     </style>
 </head>
@@ -291,6 +364,13 @@
             </div>
         </div>
     </div>
+
+    <!-- Add Location Button -->
+    <button class="add-location-button bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-3 rounded-full shadow-lg flex items-center gap-2 transition-colors border-2 border-green-700"
+            id="addLocationButton" aria-label="Add Location">
+        <i class="fas fa-plus"></i>
+        <span class="hidden sm:inline text-sm">Add Location</span>
+    </button>
 
     <!-- Settings Button -->
     <button class="settings-button bg-white hover:bg-gray-100 text-gray-800 font-bold py-3 px-3 rounded-full shadow-lg flex items-center gap-2 transition-colors border-2" style="border-color: var(--primary-color);"
@@ -336,8 +416,7 @@
         <div class="border-t border-gray-200 p-4 bg-white">
             <form class="flex gap-2" id="chatForm">
                 <input type="text" id="chatInput" placeholder="Ask about Tbilisi..." 
-                       class="flex-1 border-2 rounded-lg px-3 py-2 text-sm focus:outline-none transition-colors"
-                       style="border-color: var(--primary-color); --tw-ring-color: var(--primary-color);"
+                       class="flex-1 border-2 rounded-lg px-3 py-2 text-sm focus:outline-none transition-colors form-input"
                        aria-label="Chat input">
                 <button type="submit" class="text-white p-2 rounded-lg transition-colors font-bold" style="background-color: var(--primary-color);" aria-label="Send message">
                     <i class="fas fa-paper-plane"></i>
@@ -350,9 +429,9 @@
     <div class="settings-overlay fixed inset-0 bg-black bg-opacity-50" id="settingsOverlay"></div>
 
     <!-- Settings Panel -->
-    <div class="settings-panel fixed left-0 top-0 h-full w-80 md:w-96 bg-white shadow-2xl rounded-r-lg flex flex-col overflow-hidden" id="settingsPanel">
+    <div class="settings-panel fixed left-0 top-0 h-full w-80 md:w-96 bg-white shadow-2xl rounded-r-lg md:rounded-r-lg flex flex-col overflow-hidden" id="settingsPanel">
         <!-- Header -->
-        <div class="text-white p-4 flex justify-between items-center" style="background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));">
+        <div class="text-white p-4 flex justify-between items-center rounded-tr-lg" style="background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));">
             <h3 class="text-lg font-bold">
                 <i class="fas fa-palette mr-2"></i>Customize Theme
             </h3>
@@ -385,12 +464,93 @@
                 <button onclick="centerMapOnTbilisi()" class="w-full text-left px-4 py-2 hover:bg-gray-100 rounded transition-colors text-sm text-gray-700 flex items-center gap-2">
                     <i class="fas fa-crosshairs"></i> Center Map
                 </button>
+                <button onclick="exportData()" class="w-full text-left px-4 py-2 hover:bg-gray-100 rounded transition-colors text-sm text-gray-700 flex items-center gap-2">
+                    <i class="fas fa-download"></i> Export Data
+                </button>
+                <button onclick="importDataPrompt()" class="w-full text-left px-4 py-2 hover:bg-gray-100 rounded transition-colors text-sm text-gray-700 flex items-center gap-2">
+                    <i class="fas fa-upload"></i> Import Data
+                </button>
             </div>
 
             <div class="border-t pt-4">
                 <h4 class="font-bold text-gray-800 mb-2 text-xs">About</h4>
-                <p class="text-xs text-gray-600 leading-relaxed">Lore: Tbilisi is an interactive cultural guide to Georgia's capital city. Explore historical landmarks, cultural sites, and connect with AI-powered insights.</p>
+                <p class="text-xs text-gray-600 leading-relaxed">Lore: Tbilisi is an interactive cultural guide. Add your own locations and information to create a personalized cultural experience.</p>
             </div>
+        </div>
+    </div>
+
+    <!-- Add Location Overlay -->
+    <div class="add-location-overlay fixed inset-0 bg-black bg-opacity-50" id="addLocationOverlay"></div>
+
+    <!-- Add Location Panel -->
+    <div class="add-location-panel fixed left-0 top-0 h-full w-80 md:w-96 bg-white shadow-2xl rounded-r-lg flex flex-col overflow-hidden" id="addLocationPanel">
+        <!-- Header -->
+        <div class="text-white p-4 flex justify-between items-center rounded-tr-lg" style="background: linear-gradient(135deg, #2e7d32, #1b5e20);">
+            <h3 class="text-lg font-bold">
+                <i class="fas fa-map-pin mr-2"></i>Add Location
+            </h3>
+            <button class="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded transition-colors" id="closeAddLocation" aria-label="Close">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <!-- Form Content -->
+        <div class="flex-1 overflow-y-auto p-6 space-y-4">
+            <form id="addLocationForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Location Name *</label>
+                    <input type="text" id="locName" class="w-full border-2 rounded-lg px-3 py-2 text-sm focus:outline-none form-input" placeholder="e.g., Abanotubani" required>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Icon/Emoji *</label>
+                    <input type="text" id="locIcon" class="w-full border-2 rounded-lg px-3 py-2 text-sm focus:outline-none form-input" placeholder="e.g., 🛁" maxlength="5" required>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Latitude *</label>
+                    <input type="number" id="locLat" class="w-full border-2 rounded-lg px-3 py-2 text-sm focus:outline-none form-input" placeholder="41.7151" step="0.0001" required>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Longitude *</label>
+                    <input type="number" id="locLng" class="w-full border-2 rounded-lg px-3 py-2 text-sm focus:outline-none form-input" placeholder="44.7910" step="0.0001" required>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Type *</label>
+                    <input type="text" id="locType" class="w-full border-2 rounded-lg px-3 py-2 text-sm focus:outline-none form-input" placeholder="e.g., Historical Bath House" required>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Short Description *</label>
+                    <textarea id="locShortDesc" class="w-full border-2 rounded-lg px-3 py-2 text-sm focus:outline-none form-input" placeholder="One sentence summary..." required></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">About</label>
+                    <textarea id="locAbout" class="w-full border-2 rounded-lg px-3 py-2 text-sm focus:outline-none form-input" placeholder="Detailed description of the location..."></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">History</label>
+                    <textarea id="locHistory" class="w-full border-2 rounded-lg px-3 py-2 text-sm focus:outline-none form-input" placeholder="Historical background..."></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Visitor Info</label>
+                    <textarea id="locVisitor" class="w-full border-2 rounded-lg px-3 py-2 text-sm focus:outline-none form-input" placeholder="How to visit, hours, tips..."></textarea>
+                </div>
+
+                <div class="flex gap-2 pt-4 border-t">
+                    <button type="submit" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                        <i class="fas fa-save mr-2"></i>Save Location
+                    </button>
+                    <button type="button" onclick="closeAddLocationPanel()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg transition-colors">
+                        Cancel
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -398,155 +558,27 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 
     <script>
-        // Enhanced Tbilisi Locations Database
-        const locations = [
+        // Initialize locations from localStorage or with sample data
+        let locations = JSON.parse(localStorage.getItem('loreLocations')) || [];
+        
+        // Sample data (only used if localStorage is empty)
+        const sampleLocations = [
             {
                 name: "Abanotubani",
                 coords: [41.7151, 44.7910],
                 icon: "🛁",
                 type: "Historical Bath House",
                 shortDesc: "Ancient sulfur bathhouses in the Old Town with distinctive domed roofs.",
-                description: "Abanotubani represents one of Tbilisi's most iconic attractions, featuring traditional sulfur baths nestled in the heart of the Old Town.",
-                about: "The Abanotubani sulfur baths are a UNESCO World Heritage site featuring distinctive Persian-style domed roofing. Steam rises from natural sulfur springs heated to therapeutic temperatures. The baths have been central to Tbilisi's identity for centuries, attracting locals and visitors seeking both relaxation and cultural immersion.",
-                history: "Dating back to the 5th century, Abanotubani's development coincided with Tbilisi's founding. According to legend, Saint Nino discovered the therapeutic sulfur springs, which became a foundation for the city's settlement. Through centuries of Persian, Ottoman, and Russian rule, the baths remained a symbol of Georgian resilience and cultural continuity. Today, they stand as a testament to centuries of unbroken tradition.",
-                visitor: "Best visited in early morning or evening. Public baths cost 5-10 GEL per person. Towels and bathing suits are available for rent. Private cabins with hot water pools are also available for groups. Respect local customs and dress appropriately. The baths close around 10 PM. No photography inside bathing areas.",
-                keywords: ["bath", "spa", "abanotubani", "thermal", "sulfur", "relax", "tradition", "heritage"]
-            },
-            {
-                name: "Narikala Fortress",
-                coords: [41.7169, 44.8084],
-                icon: "🏰",
-                type: "Fortress & Historical Monument",
-                shortDesc: "4th-century fortress overlooking Old Town, symbolizing Tbilisi's protective spirit.",
-                description: "Narikala Fortress stands as an imposing guardian of Tbilisi, commanding panoramic views of the Old Town and surrounding landscape from its elevated position.",
-                about: "Built in the 4th century, Narikala Fortress is one of the oldest structures in Tbilisi. Its massive stone walls have witnessed the rise and fall of empires, from Georgian kings to Persian and Ottoman rulers. The fortress houses the Metekhi Church, dedicated to Saint George, Georgia's patron saint. The equestrian statue of King David the Builder stands prominently, symbolizing Georgian sovereignty.",
-                history: "Narikala was originally built by the Persian Sassanid Empire in the 4th century. Over the centuries, it was expanded and reinforced by Georgian kings, particularly David the Builder (12th century). The fortress served as Tbilisi's primary defensive structure against invasions. During the Russian occupation (1801-1918), the fortress was used as a military prison. Restoration efforts have preserved much of the original architecture while adding interpretive elements for visitors.",
-                visitor: "Entry is free. Open daily from dawn to dusk. Best visited during golden hour for photography. The walk up steep stairs takes 10-15 minutes. Restrooms and small cafés nearby. Cable car (Metekhi-Narikala) available from Metekhi Square. Guided tours available in multiple languages. Spectacular views of Tbilisi from ramparts.",
-                keywords: ["fortress", "narikala", "history", "defense", "king david", "metekhi", "saint george", "view"]
-            },
-            {
-                name: "Rezo Gabriadze Theater",
-                coords: [41.7155, 44.8050],
-                icon: "🎭",
-                type: "Theater & Cultural Center",
-                shortDesc: "Iconic puppet theater with striking clock tower, showcasing Georgian artistic innovation.",
-                description: "The Rezo Gabriadze Theater is a masterpiece of contemporary Georgian art, blending medieval aesthetics with avant-garde puppet theater.",
-                about: "This unique theater features an ornate clock tower with mechanical figures that perform atop the hour. Inside, intricate puppet performances tell stories of Georgian culture, history, and folklore. The theater's architecture mimics medieval Georgian churches and fortresses, creating a surreal yet deeply cultural experience. Each performance is a blend of craftsmanship, storytelling, and theatrical innovation.",
-                history: "Founded by renowned Georgian artist Rezo Gabriadze in 1981, the theater began as an experimental space for puppet performances. Gabriadze, trained in animation and visual arts, transformed traditional puppetry into a sophisticated art form. The distinctive tower was added later, becoming Tbilisi's most recognizable modern landmark. The theater has gained international acclaim and has been featured in major art exhibitions worldwide. Today, it remains an active venue for performances and cultural events.",
-                visitor: "Performances typically held Wednesday-Sunday at 7 PM. Tickets: 15-25 GEL. The clock tower performs on the hour (noon, 1 PM, 2 PM, etc.). Best to arrive early for seating. Performances in Georgian, Russian, and sometimes English. Seats roughly 60-80 people. Photography allowed before performances but not during. Café on premises.",
-                keywords: ["theater", "puppet", "gabriadze", "art", "performance", "culture", "medieval", "tower"]
-            },
-            {
-                name: "Mtatsminda Funicular",
-                coords: [41.7119, 44.7995],
-                icon: "🎢",
-                type: "Recreation & Panoramic View",
-                shortDesc: "Scenic funicular railway offering breathtaking 360-degree views from 770 meters altitude.",
-                description: "The Mtatsminda Funicular Railway ascends from downtown Tbilisi to the summit, revealing ever-expanding views of the city and Caucasus Mountains.",
-                about: "The funicular climbs approximately 300 meters in altitude from the base station at Metekhi Square to the mountaintop at 770 meters above sea level. At the summit, visitors find a panoramic restaurant, children's amusement park, and open-air observation areas. On clear days, views extend to the Greater Caucasus Mountains. The journey takes about 5 minutes, offering stunning photo opportunities throughout the ride and at the top.",
-                history: "The original funicular was constructed in 1912 during the Russian Empire period. It served as a major leisure destination for Tbilisi's middle class. The railway was destroyed during various conflicts but was reconstructed in 1959 during the Soviet period. Modern renovations in the 1990s and 2000s restored it to its current state. Today, it remains one of Tbilisi's most popular tourist attractions, drawing locals and visitors seeking respite from the city below.",
-                visitor: "Ride costs: 1 GEL (single trip), 1.5 GEL (round trip). Entry is free; only the ride is paid. Restaurant at top opens 12 PM-11 PM daily. Food prices moderate (10-30 GEL for meals). Kids amusement park with small rides. Observe weather before visiting for optimal views. Wind can be strong at the summit. Best visited in early morning or late afternoon for photography. Restrooms available.",
-                keywords: ["funicular", "mtatsminda", "view", "mountain", "cable car", "restaurant", "panorama", "amusement"]
-            },
-            {
-                name: "Chronicle of Georgia Monument",
-                coords: [41.7133, 44.8230],
-                icon: "📜",
-                type: "Monument & Sculpture Art",
-                shortDesc: "38-meter monumental sculpture depicting Georgian history from 4th to 13th centuries.",
-                description: "The Chronicle of Georgia Monument stands as a towering testament to Georgian medieval history, with 13 sculptured figures representing different historical eras.",
-                about: "This imposing sculpture complex features 13 bronze figures, each standing roughly 3-4 meters tall, representing key periods and personalities in Georgian history from the 4th to 13th centuries. Created by sculptor Zurab Tsereteli, the monument uses both realistic and stylized forms to convey different historical moments. The figures include saints, kings, queens, and warriors, each with symbolic objects and poses reflecting their historical significance.",
-                history: "Constructed between 1985-2008, the Chronicle of Georgia Monument was created by the internationally renowned Georgian sculptor Zurab Tsereteli. The project took over two decades to complete, reflecting the meticulousness required for such a massive undertaking. Each figure was individually sculpted and cast in bronze. The monument's design draws from Georgian artistic traditions while employing modern sculptural techniques. It has become one of Tbilisi's most photographed landmarks and a symbol of Georgian cultural pride.",
-                visitor: "Monument is visible from numerous vantage points across Tbilisi. Located near the Georgian Parliament building. Can be reached by marshrutka (shared minibus) or private car. Best photographed from a distance to capture the full scale. Nearby restaurants and cafés. Peaceful park area around the base. Open 24/7. No entrance fee. Excellent spot for sunset photography. Information plaques (in Georgian, English, Russian) explain each figure's historical significance.",
-                keywords: ["monument", "chronicle", "history", "sculpture", "tsereteli", "medieval", "georgia", "cultural"]
+                about: "The Abanotubani sulfur baths are a UNESCO World Heritage site featuring distinctive Persian-style domed roofing. Steam rises from natural sulfur springs heated to therapeutic temperatures.",
+                history: "Dating back to the 5th century, Abanotubani's development coincided with Tbilisi's founding. Through centuries of Persian, Ottoman, and Russian rule, the baths remained a symbol of Georgian resilience.",
+                visitor: "Best visited in early morning or evening. Public baths cost 5-10 GEL per person. Towels and bathing suits are available for rent. The baths close around 10 PM."
             }
         ];
 
-        // Enhanced AI Knowledge Base
-        const aiKnowledgeBase = {
-            // Location-specific responses
-            abanotubani: {
-                triggers: ["abanotubani", "bath", "sulfur", "thermal", "spa"],
-                responses: [
-                    "Abanotubani is a UNESCO World Heritage site featuring traditional Persian-style sulfur baths. The baths utilize natural thermal springs with temperatures perfect for relaxation and therapeutic benefits. Visit early morning for a more local experience.",
-                    "The sulfur baths at Abanotubani have been therapeutic hubs for centuries. According to Georgian legend, Saint Nino discovered these springs, which became foundational to Tbilisi's settlement. Public baths are affordable and provide an authentic cultural experience.",
-                    "Did you know? The distinctive domed architecture of Abanotubani was influenced by Persian design during the Sassanid and later Islamic periods. Today, the baths remain largely unchanged, preserving centuries-old traditions."
-                ]
-            },
-            narikala: {
-                triggers: ["narikala", "fortress", "castle", "defense", "king david", "metekhi"],
-                responses: [
-                    "Narikala Fortress dates back to the 4th century and represents Tbilisi's oldest fortification. It was significantly expanded under King David the Builder in the 12th century, who strengthened the walls and expanded its defensive capabilities.",
-                    "The equestrian statue inside Narikala depicts King David the Builder, Georgia's greatest medieval king. He unified Georgia, defeated the Seljuk Turks, and transformed Georgia into a regional superpower during the 12th century.",
-                    "Metekhi Church within Narikala is dedicated to Saint George, Georgia's patron saint. Many Georgians believe Saint George protects the nation. The church has been a spiritual center for over 1,400 years and remains an important pilgrimage site."
-                ]
-            },
-            gabriadze: {
-                triggers: ["gabriadze", "theater", "puppet", "art", "performance", "tower"],
-                responses: [
-                    "Rezo Gabriadze is one of Georgia's most celebrated contemporary artists. His puppet theater is renowned internationally and has been featured in exhibitions across Europe and America. The clock tower has become an iconic symbol of modern Tbilisi.",
-                    "The theater's performances blend traditional Georgian storytelling with avant-garde puppet techniques. Each show is a meticulously crafted artistic experience. Performances typically run Wednesday-Sunday evenings.",
-                    "The mechanical clock tower is a marvel of engineering and artistry. On the hour, mechanical figures emerge and perform an intricate dance. It's a unique Tbilisi experience that attracts both art enthusiasts and casual tourists."
-                ]
-            },
-            mtatsminda: {
-                triggers: ["mtatsminda", "funicular", "view", "mountain", "restaurant", "panorama"],
-                responses: [
-                    "The Mtatsminda Funicular dates back to 1912 during the Russian Empire. Modern renovations have preserved its historical charm while ensuring visitor safety. The 5-minute ride offers stunning views at every moment.",
-                    "At the summit (770 meters), the panoramic restaurant serves traditional Georgian cuisine with views of the Caucasus Mountains. On clear days, you can see Mount Kazbek and Mount Elbrus in the distance—truly spectacular!",
-                    "Mtatsminda means 'dark mountain' in Georgian. Legend says it was named after a saint who meditated on this peak. Today, it's Tbilisi's favorite leisure destination, especially during sunset when the city lights begin to twinkle below."
-                ]
-            },
-            chronicle: {
-                triggers: ["chronicle", "monument", "sculpture", "history", "medieval", "tsereteli", "georgia"],
-                responses: [
-                    "The Chronicle of Georgia Monument represents 13 key periods in Georgian medieval history from the 4th to 13th centuries. Each 3-4 meter bronze figure tells a story of Georgian civilization's rise and achievements.",
-                    "Sculptor Zurab Tsereteli, an internationally renowned Georgian artist, spent over 20 years creating this masterpiece. It's one of his most ambitious projects and has won critical acclaim for its artistic and historical significance.",
-                    "The figures include Queen Tamar (Georgia's greatest female ruler), King David the Builder, Saint Nino (who brought Christianity to Georgia), and other historical figures. Each figure's pose and symbolic objects represent specific historical moments."
-                ]
-            },
-            // General knowledge
-            history: {
-                triggers: ["history", "past", "medieval", "ancient", "georgia"],
-                responses: [
-                    "Georgia has been a center of civilization for over 3,000 years. The country sits at the crossroads of Europe and Asia, which shaped its rich and complex history. Georgian culture has remained distinctive despite numerous invasions and occupations.",
-                    "Medieval Georgia (particularly the 12th-13th centuries under kings like David the Builder and Queen Tamar) was a golden age of prosperity, military strength, and cultural flourishing. This era left lasting architectural and artistic legacies.",
-                    "Georgia adopted Christianity in 330 AD when Saint Nino arrived from Jerusalem. Christianity became deeply embedded in Georgian identity and culture, influencing everything from architecture to social values."
-                ]
-            },
-            culture: {
-                triggers: ["culture", "tradition", "georgian", "customs", "people"],
-                responses: [
-                    "Georgian culture emphasizes hospitality, pride, and community. The word 'sitsvis sheni' (Georgia) means 'the land of wolves,' reflecting the nation's fierce independence and warrior heritage.",
-                    "Georgian polyphonic singing is UNESCO-recognized intangible heritage. These traditional songs, often performed a cappella by male choirs, express joy, sorrow, and national identity. The unique harmonies are unlike any other musical tradition.",
-                    "Georgians are incredibly hospitable—the saying goes 'a guest is a gift from God.' If invited to a Georgian home, expect abundant food, wine, and warm welcome. Refusing hospitality is considered impolite!"
-                ]
-            },
-            food: {
-                triggers: ["food", "eat", "cuisine", "khachapuri", "khinkali", "wine", "restaurant"],
-                responses: [
-                    "Georgian cuisine is among the world's most distinctive. Khachapuri (cheese-filled bread) and khinkali (pork/beef dumplings) are national dishes. Each region has its own specialty—try Adjarian khachapuri with a baked egg on top!",
-                    "Georgia is an ancient wine region with over 8,000 years of winemaking history. Traditional Georgian wine-making uses qvevri (large clay vessels buried underground). Visiting a wine region like Kakheti is a must for wine enthusiasts.",
-                    "Georgian feasts are legendary. A traditional supra (table) features toasts, multiple courses, and endless wine. The tamada (toastmaster) leads elaborate toasts honoring guests, family, and nation. It's as much about community as food."
-                ]
-            },
-            tbilisi: {
-                triggers: ["tbilisi", "city", "visit", "explore", "capital", "travel"],
-                responses: [
-                    "Tbilisi is Georgia's capital and cultural heart, home to 1.2+ million people. The city blends ancient traditions with modern energy—medieval Old Town architecture stands beside contemporary glass buildings.",
-                    "Tbilisi sits on the Mtkvari River, which was crucial to the city's founding and development. The name 'Tbilisi' reportedly comes from 'tpili' (warm) because of the natural hot springs discovered in the area.",
-                    "Best neighborhoods to explore: Old Town (historic), Vake (modern/upscale), Gldani (local life), and Saburtalo (hip/trendy). Each offers unique perspectives on Georgian culture and urban life."
-                ]
-            },
-            default: {
-                triggers: [],
-                responses: [
-                    "That's an interesting question! Let me help you explore Tbilisi's cultural treasures. Click on the map markers to discover specific locations, or ask me about Georgian history, culture, food, or travel tips.",
-                    "I'd love to help! You can ask me about specific landmarks on the map, Georgian traditions, local cuisine, historical events, or practical travel advice. What interests you most?",
-                    "Great question! Tbilisi has centuries of fascinating stories. Each of the five locations on this map represents important chapters in Georgian history and culture. Which would you like to explore?"
-                ]
-            }
-        };
+        if (locations.length === 0) {
+            locations = sampleLocations;
+            saveLocations();
+        }
 
         // Initialize Leaflet Map
         const map = L.map('map').setView([41.7151, 44.7910], 13);
@@ -557,21 +589,27 @@
 
         const markerGroup = L.featureGroup().addTo(map);
 
-        // Create and Add Markers
-        locations.forEach((location, index) => {
-            const marker = L.marker(location.coords, {
-                title: location.name
-            }).addTo(markerGroup);
+        // Function to render all markers
+        function renderMarkers() {
+            markerGroup.clearLayers();
+            locations.forEach((location, index) => {
+                const marker = L.marker(location.coords, {
+                    title: location.name
+                }).addTo(markerGroup);
 
-            marker.bindPopup(`<strong>${location.name}</strong><br>${location.type}`, { closeButton: true });
+                marker.bindPopup(`<strong>${location.name}</strong><br>${location.type}`, { closeButton: true });
 
-            marker.on('click', () => {
-                updateStoryCard(location);
-                if (window.innerWidth < 768) {
-                    document.querySelector('.story-card').scrollIntoView({ behavior: 'smooth', block: 'end' });
-                }
+                marker.on('click', () => {
+                    updateStoryCard(location);
+                    if (window.innerWidth < 768) {
+                        document.querySelector('.story-card').scrollIntoView({ behavior: 'smooth', block: 'end' });
+                    }
+                });
             });
-        });
+        }
+
+        // Initial render
+        renderMarkers();
 
         // Update Story Card Function
         function updateStoryCard(location) {
@@ -579,25 +617,38 @@
             document.getElementById('storyType').textContent = location.type;
             document.getElementById('storyDescription').textContent = location.shortDesc;
             document.getElementById('storyCoords').textContent = `${location.coords[0].toFixed(4)}°N, ${location.coords[1].toFixed(4)}°E`;
-            document.getElementById('storyAbout').textContent = location.about;
+            document.getElementById('storyAbout').textContent = location.about || 'No information available.';
             
-            document.getElementById('storyHistory').textContent = location.history;
-            document.getElementById('storyHistoryDiv').style.display = 'block';
+            if (location.history) {
+                document.getElementById('storyHistory').textContent = location.history;
+                document.getElementById('storyHistoryDiv').style.display = 'block';
+            } else {
+                document.getElementById('storyHistoryDiv').style.display = 'none';
+            }
             
-            document.getElementById('storyVisitor').textContent = location.visitor;
-            document.getElementById('storyVisitorDiv').style.display = 'block';
+            if (location.visitor) {
+                document.getElementById('storyVisitor').textContent = location.visitor;
+                document.getElementById('storyVisitorDiv').style.display = 'block';
+            } else {
+                document.getElementById('storyVisitorDiv').style.display = 'none';
+            }
 
             // Add AI message about the location
-            const matchedLocation = Object.keys(aiKnowledgeBase).find(key => 
-                location.keywords.some(kw => kw === key) || 
-                location.name.toLowerCase().includes(key)
-            );
-            
-            if (matchedLocation && aiKnowledgeBase[matchedLocation]) {
-                const responses = aiKnowledgeBase[matchedLocation].responses;
-                const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-                addAIMessage(randomResponse);
-            }
+            addAIMessage(generateLocationResponse(location));
+        }
+
+        // Generate AI response based on location data
+        function generateLocationResponse(location) {
+            const responses = [
+                `Welcome to ${location.name}! ${location.shortDesc}`,
+                `Let me tell you about ${location.name}. ${location.about}`,
+                `${location.name} is quite special. ${location.history}`,
+                `Interested in visiting ${location.name}? ${location.visitor}`
+            ];
+
+            // Filter out empty responses
+            const validResponses = responses.filter(r => !r.includes('undefined') && r.trim().length > 0);
+            return validResponses[Math.floor(Math.random() * validResponses.length)] || `Discover ${location.name} on the map!`;
         }
 
         // AI Chat Functionality
@@ -613,6 +664,12 @@
         const settingsPanel = document.getElementById('settingsPanel');
         const settingsOverlay = document.getElementById('settingsOverlay');
         const closeSettings = document.getElementById('closeSettings');
+
+        const addLocationButton = document.getElementById('addLocationButton');
+        const addLocationPanel = document.getElementById('addLocationPanel');
+        const addLocationOverlay = document.getElementById('addLocationOverlay');
+        const closeAddLocation = document.getElementById('closeAddLocation');
+        const addLocationForm = document.getElementById('addLocationForm');
 
         // Toggle Chat Drawer
         aiButton.addEventListener('click', () => {
@@ -646,6 +703,93 @@
             settingsPanel.classList.remove('active');
             settingsOverlay.classList.remove('active');
         });
+
+        // Toggle Add Location Panel
+        addLocationButton.addEventListener('click', () => {
+            addLocationPanel.classList.add('active');
+            addLocationOverlay.classList.add('active');
+            document.getElementById('addLocationForm').reset();
+        });
+
+        function closeAddLocationPanel() {
+            addLocationPanel.classList.remove('active');
+            addLocationOverlay.classList.remove('active');
+        }
+
+        closeAddLocation.addEventListener('click', closeAddLocationPanel);
+        addLocationOverlay.addEventListener('click', closeAddLocationPanel);
+
+        // Add Location Form Handler
+        addLocationForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const newLocation = {
+                name: document.getElementById('locName').value,
+                coords: [parseFloat(document.getElementById('locLat').value), parseFloat(document.getElementById('locLng').value)],
+                icon: document.getElementById('locIcon').value,
+                type: document.getElementById('locType').value,
+                shortDesc: document.getElementById('locShortDesc').value,
+                about: document.getElementById('locAbout').value || '',
+                history: document.getElementById('locHistory').value || '',
+                visitor: document.getElementById('locVisitor').value || ''
+            };
+
+            locations.push(newLocation);
+            saveLocations();
+            renderMarkers();
+            closeAddLocationPanel();
+            
+            // Show success message
+            addAIMessage(`✅ Location "${newLocation.name}" has been added to the map!`);
+        });
+
+        // Save locations to localStorage
+        function saveLocations() {
+            localStorage.setItem('loreLocations', JSON.stringify(locations));
+        }
+
+        // Export Data
+        function exportData() {
+            const dataStr = JSON.stringify(locations, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'lore-tbilisi-locations.json';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            addAIMessage('📥 Your locations data has been exported as JSON.');
+        }
+
+        // Import Data
+        function importDataPrompt() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const importedLocations = JSON.parse(event.target.result);
+                        if (Array.isArray(importedLocations)) {
+                            locations = importedLocations;
+                            saveLocations();
+                            renderMarkers();
+                            addAIMessage(`✅ Imported ${importedLocations.length} location(s) successfully!`);
+                        } else {
+                            addAIMessage('❌ Invalid file format. Please use a valid JSON file.');
+                        }
+                    } catch (error) {
+                        addAIMessage('❌ Error importing file: ' + error.message);
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
 
         // Chat Message Handler
         chatForm.addEventListener('submit', (e) => {
@@ -691,25 +835,28 @@
             addChatMessage(text, 'assistant');
         }
 
-        // Enhanced AI Response Generator
+        // Generate AI Response
         function generateAIResponse(userMessage) {
             const lowerMessage = userMessage.toLowerCase();
 
-            // Check location-specific knowledge
-            for (const [key, data] of Object.entries(aiKnowledgeBase)) {
-                if (key !== 'default' && data.triggers) {
-                    for (const trigger of data.triggers) {
-                        if (lowerMessage.includes(trigger)) {
-                            const responses = data.responses;
-                            return responses[Math.floor(Math.random() * responses.length)];
-                        }
-                    }
+            // Check if asking about a specific location
+            for (const location of locations) {
+                if (lowerMessage.includes(location.name.toLowerCase()) || 
+                    lowerMessage.includes('tell me about') || 
+                    lowerMessage.includes('what is')) {
+                    return generateLocationResponse(location);
                 }
             }
 
-            // Default response
-            const defaultResponses = aiKnowledgeBase.default.responses;
-            return defaultResponses[Math.floor(Math.random() * defaultResponses.length)];
+            // Generic responses
+            const genericResponses = [
+                'That\'s a great question! Click on any marker on the map to learn about specific locations, or ask me about any of the places we have here.',
+                'I\'d love to help! You can ask me about specific landmarks, their history, visitor information, or anything about Tbilisi.',
+                'Interesting! You can use the "Add Location" button to add new places to explore. Each location can have detailed information, history, and visitor tips.',
+                'Feel free to explore the map! You can click on markers to see details or add new locations to build your own cultural guide.'
+            ];
+
+            return genericResponses[Math.floor(Math.random() * genericResponses.length)];
         }
 
         // Theme Customization
@@ -718,13 +865,11 @@
             document.documentElement.style.setProperty('--primary-dark', dark);
             document.documentElement.style.setProperty('--primary-light', light);
 
-            // Update color picker active state
             document.querySelectorAll('.color-picker-circle').forEach(circle => {
                 circle.classList.remove('active');
             });
             event.target.classList.add('active');
 
-            // Save preference
             localStorage.setItem('themeColor', JSON.stringify({ primary, dark, light }));
         }
 
@@ -746,7 +891,6 @@
 
         // Helper functions
         function closeStoryCard() {
-            // On mobile, collapse the story card
             const storyCard = document.querySelector('.story-card');
             storyCard.style.maxHeight = '0';
             setTimeout(() => { storyCard.style.maxHeight = ''; }, 500);
@@ -764,9 +908,11 @@
             settingsOverlay.classList.remove('active');
         }
 
-        // Initialize with first location
+        // Initial welcome message
         document.addEventListener('DOMContentLoaded', () => {
-            updateStoryCard(locations[0]);
+            if (locations.length > 0) {
+                updateStoryCard(locations[0]);
+            }
         });
     </script>
 </body>
