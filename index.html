@@ -15,20 +15,45 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     
     <style>
+        :root {
+            --primary-color: #d32f2f;
+            --primary-dark: #b71c1c;
+            --primary-light: #ef5350;
+            --accent-color: #ffc107;
+        }
+
+        * {
+            --tw-ring-color: var(--primary-color);
+        }
+
         #map {
             height: 100vh;
             width: 100%;
+            position: relative;
+            z-index: 10;
         }
         
         .story-card {
             backdrop-filter: blur(10px);
-            background: rgba(255, 255, 255, 0.95);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.98);
+            border: 2px solid var(--primary-color);
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            z-index: 40;
+        }
+
+        .story-card-mobile {
+            max-height: 45vh;
+        }
+
+        .story-card-desktop {
+            max-height: 50vh;
         }
         
         .chat-drawer {
             transition: transform 0.3s ease-in-out;
             transform: translateX(100%);
+            z-index: 50;
         }
         
         .chat-drawer.active {
@@ -39,9 +64,32 @@
             opacity: 0;
             visibility: hidden;
             transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+            z-index: 45;
         }
         
         .chat-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .settings-panel {
+            transition: transform 0.3s ease-in-out;
+            transform: translateX(-100%);
+            z-index: 50;
+        }
+
+        .settings-panel.active {
+            transform: translateX(0);
+        }
+
+        .settings-overlay {
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+            z-index: 48;
+        }
+
+        .settings-overlay.active {
             opacity: 1;
             visibility: visible;
         }
@@ -55,22 +103,29 @@
             height: 40px;
             border-radius: 50%;
             background: white;
-            border: 3px solid #d32f2f;
+            border: 3px solid var(--primary-color);
             cursor: pointer;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
             transition: transform 0.2s;
         }
         
         .marker-icon:hover {
-            transform: scale(1.1);
+            transform: scale(1.15);
         }
         
         .floating-button {
             position: fixed;
             bottom: 30px;
             right: 30px;
-            z-index: 40;
+            z-index: 35;
             animation: float 3s ease-in-out infinite;
+        }
+
+        .settings-button {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            z-index: 35;
         }
         
         @keyframes float {
@@ -94,55 +149,183 @@
         }
 
         .story-card h2 {
-            color: #d32f2f;
+            color: var(--primary-color);
         }
 
         .story-card h3 {
             color: #333;
         }
+
+        .color-picker-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 3px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .color-picker-circle:hover {
+            transform: scale(1.1);
+        }
+
+        .color-picker-circle.active {
+            border-color: #333;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            .story-card {
+                width: 90vw;
+                bottom: 10px;
+                left: 50%;
+                transform: translateX(-50%);
+            }
+
+            .story-card-mobile {
+                max-height: 40vh;
+            }
+
+            .chat-drawer {
+                width: 100%;
+                bottom: 0;
+                right: 0 !important;
+                top: auto;
+                border-radius: 12px 12px 0 0;
+            }
+
+            .floating-button {
+                bottom: 20px;
+                right: 20px;
+                padding: 12px 16px !important;
+            }
+
+            .settings-button {
+                bottom: 20px;
+                left: 20px;
+            }
+
+            .chat-drawer-header {
+                border-radius: 12px 12px 0 0;
+            }
+
+            #map {
+                height: 100vh;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .floating-button span:last-child {
+                display: none;
+            }
+
+            .floating-button {
+                width: 50px;
+                height: 50px;
+                padding: 0 !important;
+                justify-content: center;
+            }
+
+            .settings-button {
+                width: 50px;
+                height: 50px;
+                justify-content: center;
+            }
+
+            .story-card {
+                width: 95vw;
+                padding: 16px;
+            }
+
+            .chat-drawer {
+                width: 100%;
+            }
+
+            .settings-panel {
+                width: 100%;
+            }
+        }
+
+        .scroll-smooth {
+            scroll-behavior: smooth;
+        }
     </style>
 </head>
-<body class="bg-gray-900">
+<body class="bg-gray-900 overflow-hidden">
     <!-- Leaflet Map Container -->
     <div id="map"></div>
 
-    <!-- Story Card (Bottom Left) -->
-    <div class="absolute bottom-6 left-6 w-80 story-card rounded-lg shadow-2xl p-6 z-20 max-h-96 overflow-y-auto">
-        <h2 class="text-2xl font-bold mb-2" id="storyTitle">Welcome to Tbilisi</h2>
+    <!-- Story Card (Bottom Center / Mobile Friendly) -->
+    <div class="absolute bottom-6 left-6 right-6 md:left-6 md:right-auto md:w-96 story-card story-card-desktop md:story-card-desktop overflow-y-auto">
+        <div class="flex justify-between items-start mb-3">
+            <div>
+                <h2 class="text-2xl font-bold mb-1" id="storyTitle">Welcome to Tbilisi</h2>
+                <p class="text-gray-500 text-xs" id="storyType">Cultural Heritage</p>
+            </div>
+            <button onclick="closeStoryCard()" class="text-gray-500 hover:text-gray-700 md:hidden">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
         <p class="text-gray-700 text-sm mb-4" id="storyDescription">
             Click on any marker on the map to explore the rich cultural heritage of Georgia's capital city.
         </p>
-        <div id="storyDetails" class="text-gray-600 text-xs space-y-2">
-            <p><strong>Coordinates:</strong> <span id="storyCoords">41.7151°N, 44.7910°E</span></p>
+
+        <div id="storyDetails" class="text-gray-600 text-sm space-y-3 border-t pt-3">
+            <div>
+                <p class="font-semibold text-gray-800 text-xs uppercase tracking-wide mb-1">Coordinates</p>
+                <p id="storyCoords" class="text-xs">41.7151°N, 44.7910°E</p>
+            </div>
+            <div>
+                <p class="font-semibold text-gray-800 text-xs uppercase tracking-wide mb-1">About</p>
+                <p id="storyAbout" class="text-xs leading-relaxed">Select a location to learn more...</p>
+            </div>
+            <div id="storyHistoryDiv" style="display: none;">
+                <p class="font-semibold text-gray-800 text-xs uppercase tracking-wide mb-1">History</p>
+                <p id="storyHistory" class="text-xs leading-relaxed"></p>
+            </div>
+            <div id="storyVisitorDiv" style="display: none;">
+                <p class="font-semibold text-gray-800 text-xs uppercase tracking-wide mb-1">Visitor Info</p>
+                <p id="storyVisitor" class="text-xs leading-relaxed"></p>
+            </div>
         </div>
     </div>
 
+    <!-- Settings Button -->
+    <button class="settings-button bg-white hover:bg-gray-100 text-gray-800 font-bold py-3 px-3 rounded-full shadow-lg flex items-center gap-2 transition-colors border-2" style="border-color: var(--primary-color);"
+            id="settingsButton" aria-label="Open Settings">
+        <i class="fas fa-palette"></i>
+        <span class="hidden sm:inline text-sm">Colors</span>
+    </button>
+
     <!-- Floating AI Culture Guide Button -->
-    <button class="floating-button bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-full shadow-lg flex items-center gap-2 transition-colors"
+    <button class="floating-button text-white font-bold py-3 px-4 rounded-full shadow-lg flex items-center gap-2 transition-all hover:shadow-xl" 
+            style="background-color: var(--primary-color);"
             id="aiButton" aria-label="Open AI Culture Guide">
         <span>🇬🇪</span>
         <span class="text-sm">Ask AI</span>
     </button>
 
     <!-- Chat Drawer Overlay -->
-    <div class="chat-overlay" id="chatOverlay"></div>
+    <div class="chat-overlay fixed inset-0 bg-black bg-opacity-50" id="chatOverlay"></div>
 
     <!-- Chat Drawer -->
-    <div class="chat-drawer fixed right-0 top-0 h-full w-96 bg-white shadow-2xl rounded-l-lg flex flex-col z-50" id="chatDrawer">
+    <div class="chat-drawer fixed right-0 top-0 md:w-96 w-full h-full md:h-screen bg-white shadow-2xl md:rounded-l-lg flex flex-col" id="chatDrawer">
         <!-- Header -->
-        <div class="bg-gradient-to-r from-red-600 to-red-700 text-white p-4 rounded-tl-lg flex justify-between items-center">
+        <div class="text-white p-4 rounded-t-lg md:rounded-t-none flex justify-between items-center" style="background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));">
             <h3 class="text-lg font-bold flex items-center gap-2">
-                <span>🇬🇪</span> AI Culture Guide
+                <span>🇬🇪</span> <span class="hidden sm:inline">AI Culture Guide</span><span class="sm:hidden">AI Guide</span>
             </h3>
-            <button class="text-white hover:bg-red-800 p-2 rounded transition-colors" id="closeChat" aria-label="Close chat">
+            <button class="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded transition-colors" id="closeChat" aria-label="Close chat">
                 <i class="fas fa-times"></i>
             </button>
         </div>
 
         <!-- Messages Container -->
-        <div class="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50" id="chatMessages">
+        <div class="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 scroll-smooth" id="chatMessages">
             <div class="message-bubble">
-                <div class="bg-red-100 text-red-800 p-3 rounded-lg text-sm">
+                <div class="p-3 rounded-lg text-sm text-white" style="background-color: var(--primary-color);">
                     <p class="font-semibold mb-1">Welcome to Lore: Tbilisi!</p>
                     <p>I'm your AI Culture Guide. Ask me anything about the locations on the map, Georgian history, culture, or local recommendations. Click any marker to start learning!</p>
                 </div>
@@ -150,15 +333,64 @@
         </div>
 
         <!-- Input Area -->
-        <div class="border-t border-gray-200 p-4 bg-white rounded-bl-lg">
+        <div class="border-t border-gray-200 p-4 bg-white">
             <form class="flex gap-2" id="chatForm">
                 <input type="text" id="chatInput" placeholder="Ask about Tbilisi..." 
-                       class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                       class="flex-1 border-2 rounded-lg px-3 py-2 text-sm focus:outline-none transition-colors"
+                       style="border-color: var(--primary-color); --tw-ring-color: var(--primary-color);"
                        aria-label="Chat input">
-                <button type="submit" class="bg-red-600 hover:bg-red-700 text-white p-2 rounded-lg transition-colors" aria-label="Send message">
+                <button type="submit" class="text-white p-2 rounded-lg transition-colors font-bold" style="background-color: var(--primary-color);" aria-label="Send message">
                     <i class="fas fa-paper-plane"></i>
                 </button>
             </form>
+        </div>
+    </div>
+
+    <!-- Settings Overlay -->
+    <div class="settings-overlay fixed inset-0 bg-black bg-opacity-50" id="settingsOverlay"></div>
+
+    <!-- Settings Panel -->
+    <div class="settings-panel fixed left-0 top-0 h-full w-80 md:w-96 bg-white shadow-2xl rounded-r-lg flex flex-col overflow-hidden" id="settingsPanel">
+        <!-- Header -->
+        <div class="text-white p-4 flex justify-between items-center" style="background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));">
+            <h3 class="text-lg font-bold">
+                <i class="fas fa-palette mr-2"></i>Customize Theme
+            </h3>
+            <button class="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded transition-colors" id="closeSettings" aria-label="Close settings">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <!-- Settings Content -->
+        <div class="flex-1 overflow-y-auto p-6 space-y-6">
+            <div>
+                <h4 class="font-bold text-gray-800 mb-4">Primary Color</h4>
+                <div class="grid grid-cols-4 gap-3">
+                    <div class="color-picker-circle active" style="background-color: #d32f2f;" onclick="setThemeColor('#d32f2f', '#b71c1c', '#ef5350')" title="Red"></div>
+                    <div class="color-picker-circle" style="background-color: #1976d2;" onclick="setThemeColor('#1976d2', '#1565c0', '#42a5f5')" title="Blue"></div>
+                    <div class="color-picker-circle" style="background-color: #388e3c;" onclick="setThemeColor('#388e3c', '#2e7d32', '#66bb6a')" title="Green"></div>
+                    <div class="color-picker-circle" style="background-color: #7b1fa2;" onclick="setThemeColor('#7b1fa2', '#6a1b9a', '#ab47bc')" title="Purple"></div>
+                    <div class="color-picker-circle" style="background-color: #f57c00;" onclick="setThemeColor('#f57c00', '#e65100', '#ffb74d')" title="Orange"></div>
+                    <div class="color-picker-circle" style="background-color: #c2185b;" onclick="setThemeColor('#c2185b', '#ad1457', '#ec407a')" title="Pink"></div>
+                    <div class="color-picker-circle" style="background-color: #00796b;" onclick="setThemeColor('#00796b', '#004d40', '#26a69a')" title="Teal"></div>
+                    <div class="color-picker-circle" style="background-color: #455a64;" onclick="setThemeColor('#455a64', '#263238', '#78909c')" title="Gray"></div>
+                </div>
+            </div>
+
+            <div class="border-t pt-4">
+                <h4 class="font-bold text-gray-800 mb-3">Quick Links</h4>
+                <button onclick="scrollToTop()" class="w-full text-left px-4 py-2 hover:bg-gray-100 rounded transition-colors text-sm text-gray-700 flex items-center gap-2">
+                    <i class="fas fa-map"></i> Back to Map
+                </button>
+                <button onclick="centerMapOnTbilisi()" class="w-full text-left px-4 py-2 hover:bg-gray-100 rounded transition-colors text-sm text-gray-700 flex items-center gap-2">
+                    <i class="fas fa-crosshairs"></i> Center Map
+                </button>
+            </div>
+
+            <div class="border-t pt-4">
+                <h4 class="font-bold text-gray-800 mb-2 text-xs">About</h4>
+                <p class="text-xs text-gray-600 leading-relaxed">Lore: Tbilisi is an interactive cultural guide to Georgia's capital city. Explore historical landmarks, cultural sites, and connect with AI-powered insights.</p>
+            </div>
         </div>
     </div>
 
@@ -166,53 +398,163 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 
     <script>
-        // Tbilisi Locations Data
+        // Enhanced Tbilisi Locations Database
         const locations = [
             {
                 name: "Abanotubani",
                 coords: [41.7151, 44.7910],
                 icon: "🛁",
-                description: "Ancient sulfur bathhouses nestled in the old town, a UNESCO World Heritage site. Known for their distinctive dome-shaped roofs.",
-                details: "The baths date back to the 5th century and remain one of Tbilisi's most iconic attractions."
+                type: "Historical Bath House",
+                shortDesc: "Ancient sulfur bathhouses in the Old Town with distinctive domed roofs.",
+                description: "Abanotubani represents one of Tbilisi's most iconic attractions, featuring traditional sulfur baths nestled in the heart of the Old Town.",
+                about: "The Abanotubani sulfur baths are a UNESCO World Heritage site featuring distinctive Persian-style domed roofing. Steam rises from natural sulfur springs heated to therapeutic temperatures. The baths have been central to Tbilisi's identity for centuries, attracting locals and visitors seeking both relaxation and cultural immersion.",
+                history: "Dating back to the 5th century, Abanotubani's development coincided with Tbilisi's founding. According to legend, Saint Nino discovered the therapeutic sulfur springs, which became a foundation for the city's settlement. Through centuries of Persian, Ottoman, and Russian rule, the baths remained a symbol of Georgian resilience and cultural continuity. Today, they stand as a testament to centuries of unbroken tradition.",
+                visitor: "Best visited in early morning or evening. Public baths cost 5-10 GEL per person. Towels and bathing suits are available for rent. Private cabins with hot water pools are also available for groups. Respect local customs and dress appropriately. The baths close around 10 PM. No photography inside bathing areas.",
+                keywords: ["bath", "spa", "abanotubani", "thermal", "sulfur", "relax", "tradition", "heritage"]
             },
             {
                 name: "Narikala Fortress",
                 coords: [41.7169, 44.8084],
                 icon: "🏰",
-                description: "A 4th-century fortress overlooking the Old Town, symbolizing Tbilisi's protective spirit.",
-                details: "Offers panoramic views of the city and houses the Metekhi Church, dedicated to Saint George."
+                type: "Fortress & Historical Monument",
+                shortDesc: "4th-century fortress overlooking Old Town, symbolizing Tbilisi's protective spirit.",
+                description: "Narikala Fortress stands as an imposing guardian of Tbilisi, commanding panoramic views of the Old Town and surrounding landscape from its elevated position.",
+                about: "Built in the 4th century, Narikala Fortress is one of the oldest structures in Tbilisi. Its massive stone walls have witnessed the rise and fall of empires, from Georgian kings to Persian and Ottoman rulers. The fortress houses the Metekhi Church, dedicated to Saint George, Georgia's patron saint. The equestrian statue of King David the Builder stands prominently, symbolizing Georgian sovereignty.",
+                history: "Narikala was originally built by the Persian Sassanid Empire in the 4th century. Over the centuries, it was expanded and reinforced by Georgian kings, particularly David the Builder (12th century). The fortress served as Tbilisi's primary defensive structure against invasions. During the Russian occupation (1801-1918), the fortress was used as a military prison. Restoration efforts have preserved much of the original architecture while adding interpretive elements for visitors.",
+                visitor: "Entry is free. Open daily from dawn to dusk. Best visited during golden hour for photography. The walk up steep stairs takes 10-15 minutes. Restrooms and small cafés nearby. Cable car (Metekhi-Narikala) available from Metekhi Square. Guided tours available in multiple languages. Spectacular views of Tbilisi from ramparts.",
+                keywords: ["fortress", "narikala", "history", "defense", "king david", "metekhi", "saint george", "view"]
             },
             {
                 name: "Rezo Gabriadze Theater",
                 coords: [41.7155, 44.8050],
                 icon: "🎭",
-                description: "An iconic puppet theater with a striking clock tower, built by renowned Georgian artist Rezo Gabriadze.",
-                details: "Features intricate medieval-style architecture and hosts performances that blend art, history, and whimsy."
+                type: "Theater & Cultural Center",
+                shortDesc: "Iconic puppet theater with striking clock tower, showcasing Georgian artistic innovation.",
+                description: "The Rezo Gabriadze Theater is a masterpiece of contemporary Georgian art, blending medieval aesthetics with avant-garde puppet theater.",
+                about: "This unique theater features an ornate clock tower with mechanical figures that perform atop the hour. Inside, intricate puppet performances tell stories of Georgian culture, history, and folklore. The theater's architecture mimics medieval Georgian churches and fortresses, creating a surreal yet deeply cultural experience. Each performance is a blend of craftsmanship, storytelling, and theatrical innovation.",
+                history: "Founded by renowned Georgian artist Rezo Gabriadze in 1981, the theater began as an experimental space for puppet performances. Gabriadze, trained in animation and visual arts, transformed traditional puppetry into a sophisticated art form. The distinctive tower was added later, becoming Tbilisi's most recognizable modern landmark. The theater has gained international acclaim and has been featured in major art exhibitions worldwide. Today, it remains an active venue for performances and cultural events.",
+                visitor: "Performances typically held Wednesday-Sunday at 7 PM. Tickets: 15-25 GEL. The clock tower performs on the hour (noon, 1 PM, 2 PM, etc.). Best to arrive early for seating. Performances in Georgian, Russian, and sometimes English. Seats roughly 60-80 people. Photography allowed before performances but not during. Café on premises.",
+                keywords: ["theater", "puppet", "gabriadze", "art", "performance", "culture", "medieval", "tower"]
             },
             {
                 name: "Mtatsminda Funicular",
                 coords: [41.7119, 44.7995],
                 icon: "🎢",
-                description: "A scenic funicular railway providing breathtaking views of Tbilisi from an altitude of 770 meters.",
-                details: "The panoramic restaurant at the top offers 360-degree views of the city, Caucasus mountains, and surrounding landscape."
+                type: "Recreation & Panoramic View",
+                shortDesc: "Scenic funicular railway offering breathtaking 360-degree views from 770 meters altitude.",
+                description: "The Mtatsminda Funicular Railway ascends from downtown Tbilisi to the summit, revealing ever-expanding views of the city and Caucasus Mountains.",
+                about: "The funicular climbs approximately 300 meters in altitude from the base station at Metekhi Square to the mountaintop at 770 meters above sea level. At the summit, visitors find a panoramic restaurant, children's amusement park, and open-air observation areas. On clear days, views extend to the Greater Caucasus Mountains. The journey takes about 5 minutes, offering stunning photo opportunities throughout the ride and at the top.",
+                history: "The original funicular was constructed in 1912 during the Russian Empire period. It served as a major leisure destination for Tbilisi's middle class. The railway was destroyed during various conflicts but was reconstructed in 1959 during the Soviet period. Modern renovations in the 1990s and 2000s restored it to its current state. Today, it remains one of Tbilisi's most popular tourist attractions, drawing locals and visitors seeking respite from the city below.",
+                visitor: "Ride costs: 1 GEL (single trip), 1.5 GEL (round trip). Entry is free; only the ride is paid. Restaurant at top opens 12 PM-11 PM daily. Food prices moderate (10-30 GEL for meals). Kids amusement park with small rides. Observe weather before visiting for optimal views. Wind can be strong at the summit. Best visited in early morning or late afternoon for photography. Restrooms available.",
+                keywords: ["funicular", "mtatsminda", "view", "mountain", "cable car", "restaurant", "panorama", "amusement"]
             },
             {
                 name: "Chronicle of Georgia Monument",
                 coords: [41.7133, 44.8230],
                 icon: "📜",
-                description: "A monumental sculpture depicting Georgian history from the 4th to 13th centuries, standing 38 meters tall.",
-                details: "Each of the 13 sculptured figures represents a different era in Georgia's rich medieval history."
+                type: "Monument & Sculpture Art",
+                shortDesc: "38-meter monumental sculpture depicting Georgian history from 4th to 13th centuries.",
+                description: "The Chronicle of Georgia Monument stands as a towering testament to Georgian medieval history, with 13 sculptured figures representing different historical eras.",
+                about: "This imposing sculpture complex features 13 bronze figures, each standing roughly 3-4 meters tall, representing key periods and personalities in Georgian history from the 4th to 13th centuries. Created by sculptor Zurab Tsereteli, the monument uses both realistic and stylized forms to convey different historical moments. The figures include saints, kings, queens, and warriors, each with symbolic objects and poses reflecting their historical significance.",
+                history: "Constructed between 1985-2008, the Chronicle of Georgia Monument was created by the internationally renowned Georgian sculptor Zurab Tsereteli. The project took over two decades to complete, reflecting the meticulousness required for such a massive undertaking. Each figure was individually sculpted and cast in bronze. The monument's design draws from Georgian artistic traditions while employing modern sculptural techniques. It has become one of Tbilisi's most photographed landmarks and a symbol of Georgian cultural pride.",
+                visitor: "Monument is visible from numerous vantage points across Tbilisi. Located near the Georgian Parliament building. Can be reached by marshrutka (shared minibus) or private car. Best photographed from a distance to capture the full scale. Nearby restaurants and cafés. Peaceful park area around the base. Open 24/7. No entrance fee. Excellent spot for sunset photography. Information plaques (in Georgian, English, Russian) explain each figure's historical significance.",
+                keywords: ["monument", "chronicle", "history", "sculpture", "tsereteli", "medieval", "georgia", "cultural"]
             }
         ];
 
+        // Enhanced AI Knowledge Base
+        const aiKnowledgeBase = {
+            // Location-specific responses
+            abanotubani: {
+                triggers: ["abanotubani", "bath", "sulfur", "thermal", "spa"],
+                responses: [
+                    "Abanotubani is a UNESCO World Heritage site featuring traditional Persian-style sulfur baths. The baths utilize natural thermal springs with temperatures perfect for relaxation and therapeutic benefits. Visit early morning for a more local experience.",
+                    "The sulfur baths at Abanotubani have been therapeutic hubs for centuries. According to Georgian legend, Saint Nino discovered these springs, which became foundational to Tbilisi's settlement. Public baths are affordable and provide an authentic cultural experience.",
+                    "Did you know? The distinctive domed architecture of Abanotubani was influenced by Persian design during the Sassanid and later Islamic periods. Today, the baths remain largely unchanged, preserving centuries-old traditions."
+                ]
+            },
+            narikala: {
+                triggers: ["narikala", "fortress", "castle", "defense", "king david", "metekhi"],
+                responses: [
+                    "Narikala Fortress dates back to the 4th century and represents Tbilisi's oldest fortification. It was significantly expanded under King David the Builder in the 12th century, who strengthened the walls and expanded its defensive capabilities.",
+                    "The equestrian statue inside Narikala depicts King David the Builder, Georgia's greatest medieval king. He unified Georgia, defeated the Seljuk Turks, and transformed Georgia into a regional superpower during the 12th century.",
+                    "Metekhi Church within Narikala is dedicated to Saint George, Georgia's patron saint. Many Georgians believe Saint George protects the nation. The church has been a spiritual center for over 1,400 years and remains an important pilgrimage site."
+                ]
+            },
+            gabriadze: {
+                triggers: ["gabriadze", "theater", "puppet", "art", "performance", "tower"],
+                responses: [
+                    "Rezo Gabriadze is one of Georgia's most celebrated contemporary artists. His puppet theater is renowned internationally and has been featured in exhibitions across Europe and America. The clock tower has become an iconic symbol of modern Tbilisi.",
+                    "The theater's performances blend traditional Georgian storytelling with avant-garde puppet techniques. Each show is a meticulously crafted artistic experience. Performances typically run Wednesday-Sunday evenings.",
+                    "The mechanical clock tower is a marvel of engineering and artistry. On the hour, mechanical figures emerge and perform an intricate dance. It's a unique Tbilisi experience that attracts both art enthusiasts and casual tourists."
+                ]
+            },
+            mtatsminda: {
+                triggers: ["mtatsminda", "funicular", "view", "mountain", "restaurant", "panorama"],
+                responses: [
+                    "The Mtatsminda Funicular dates back to 1912 during the Russian Empire. Modern renovations have preserved its historical charm while ensuring visitor safety. The 5-minute ride offers stunning views at every moment.",
+                    "At the summit (770 meters), the panoramic restaurant serves traditional Georgian cuisine with views of the Caucasus Mountains. On clear days, you can see Mount Kazbek and Mount Elbrus in the distance—truly spectacular!",
+                    "Mtatsminda means 'dark mountain' in Georgian. Legend says it was named after a saint who meditated on this peak. Today, it's Tbilisi's favorite leisure destination, especially during sunset when the city lights begin to twinkle below."
+                ]
+            },
+            chronicle: {
+                triggers: ["chronicle", "monument", "sculpture", "history", "medieval", "tsereteli", "georgia"],
+                responses: [
+                    "The Chronicle of Georgia Monument represents 13 key periods in Georgian medieval history from the 4th to 13th centuries. Each 3-4 meter bronze figure tells a story of Georgian civilization's rise and achievements.",
+                    "Sculptor Zurab Tsereteli, an internationally renowned Georgian artist, spent over 20 years creating this masterpiece. It's one of his most ambitious projects and has won critical acclaim for its artistic and historical significance.",
+                    "The figures include Queen Tamar (Georgia's greatest female ruler), King David the Builder, Saint Nino (who brought Christianity to Georgia), and other historical figures. Each figure's pose and symbolic objects represent specific historical moments."
+                ]
+            },
+            // General knowledge
+            history: {
+                triggers: ["history", "past", "medieval", "ancient", "georgia"],
+                responses: [
+                    "Georgia has been a center of civilization for over 3,000 years. The country sits at the crossroads of Europe and Asia, which shaped its rich and complex history. Georgian culture has remained distinctive despite numerous invasions and occupations.",
+                    "Medieval Georgia (particularly the 12th-13th centuries under kings like David the Builder and Queen Tamar) was a golden age of prosperity, military strength, and cultural flourishing. This era left lasting architectural and artistic legacies.",
+                    "Georgia adopted Christianity in 330 AD when Saint Nino arrived from Jerusalem. Christianity became deeply embedded in Georgian identity and culture, influencing everything from architecture to social values."
+                ]
+            },
+            culture: {
+                triggers: ["culture", "tradition", "georgian", "customs", "people"],
+                responses: [
+                    "Georgian culture emphasizes hospitality, pride, and community. The word 'sitsvis sheni' (Georgia) means 'the land of wolves,' reflecting the nation's fierce independence and warrior heritage.",
+                    "Georgian polyphonic singing is UNESCO-recognized intangible heritage. These traditional songs, often performed a cappella by male choirs, express joy, sorrow, and national identity. The unique harmonies are unlike any other musical tradition.",
+                    "Georgians are incredibly hospitable—the saying goes 'a guest is a gift from God.' If invited to a Georgian home, expect abundant food, wine, and warm welcome. Refusing hospitality is considered impolite!"
+                ]
+            },
+            food: {
+                triggers: ["food", "eat", "cuisine", "khachapuri", "khinkali", "wine", "restaurant"],
+                responses: [
+                    "Georgian cuisine is among the world's most distinctive. Khachapuri (cheese-filled bread) and khinkali (pork/beef dumplings) are national dishes. Each region has its own specialty—try Adjarian khachapuri with a baked egg on top!",
+                    "Georgia is an ancient wine region with over 8,000 years of winemaking history. Traditional Georgian wine-making uses qvevri (large clay vessels buried underground). Visiting a wine region like Kakheti is a must for wine enthusiasts.",
+                    "Georgian feasts are legendary. A traditional supra (table) features toasts, multiple courses, and endless wine. The tamada (toastmaster) leads elaborate toasts honoring guests, family, and nation. It's as much about community as food."
+                ]
+            },
+            tbilisi: {
+                triggers: ["tbilisi", "city", "visit", "explore", "capital", "travel"],
+                responses: [
+                    "Tbilisi is Georgia's capital and cultural heart, home to 1.2+ million people. The city blends ancient traditions with modern energy—medieval Old Town architecture stands beside contemporary glass buildings.",
+                    "Tbilisi sits on the Mtkvari River, which was crucial to the city's founding and development. The name 'Tbilisi' reportedly comes from 'tpili' (warm) because of the natural hot springs discovered in the area.",
+                    "Best neighborhoods to explore: Old Town (historic), Vake (modern/upscale), Gldani (local life), and Saburtalo (hip/trendy). Each offers unique perspectives on Georgian culture and urban life."
+                ]
+            },
+            default: {
+                triggers: [],
+                responses: [
+                    "That's an interesting question! Let me help you explore Tbilisi's cultural treasures. Click on the map markers to discover specific locations, or ask me about Georgian history, culture, food, or travel tips.",
+                    "I'd love to help! You can ask me about specific landmarks on the map, Georgian traditions, local cuisine, historical events, or practical travel advice. What interests you most?",
+                    "Great question! Tbilisi has centuries of fascinating stories. Each of the five locations on this map represents important chapters in Georgian history and culture. Which would you like to explore?"
+                ]
+            }
+        };
+
         // Initialize Leaflet Map
-        const map = L.map('map').setView([41.7151, 44.7910], 14);
+        const map = L.map('map').setView([41.7151, 44.7910], 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; OpenStreetMap contributors',
             maxZoom: 19
         }).addTo(map);
 
-        // Custom Marker Layer Group
         const markerGroup = L.featureGroup().addTo(map);
 
         // Create and Add Markers
@@ -221,32 +563,41 @@
                 title: location.name
             }).addTo(markerGroup);
 
-            // Custom popup with location icon
-            marker.bindPopup(`<strong>${location.name}</strong>`, { closeButton: false });
+            marker.bindPopup(`<strong>${location.name}</strong><br>${location.type}`, { closeButton: true });
 
-            // Click handler to update story card
             marker.on('click', () => {
                 updateStoryCard(location);
+                if (window.innerWidth < 768) {
+                    document.querySelector('.story-card').scrollIntoView({ behavior: 'smooth', block: 'end' });
+                }
             });
-
-            // Add click event listener directly
-            marker.addEventListener = marker.on; // Compatibility layer
         });
 
         // Update Story Card Function
         function updateStoryCard(location) {
             document.getElementById('storyTitle').textContent = `${location.icon} ${location.name}`;
-            document.getElementById('storyDescription').textContent = location.description;
+            document.getElementById('storyType').textContent = location.type;
+            document.getElementById('storyDescription').textContent = location.shortDesc;
             document.getElementById('storyCoords').textContent = `${location.coords[0].toFixed(4)}°N, ${location.coords[1].toFixed(4)}°E`;
+            document.getElementById('storyAbout').textContent = location.about;
             
-            const detailsDiv = document.getElementById('storyDetails');
-            detailsDiv.innerHTML = `
-                <p><strong>Coordinates:</strong> ${location.coords[0].toFixed(4)}°N, ${location.coords[1].toFixed(4)}°E</p>
-                <p class="mt-3"><strong>About:</strong> ${location.details}</p>
-            `;
+            document.getElementById('storyHistory').textContent = location.history;
+            document.getElementById('storyHistoryDiv').style.display = 'block';
+            
+            document.getElementById('storyVisitor').textContent = location.visitor;
+            document.getElementById('storyVisitorDiv').style.display = 'block';
 
-            // Add AI suggestion
-            addAIMessage(`Explore ${location.name}! This location represents an important piece of Tbilisi's cultural heritage. Would you like to know more about its history or local recommendations nearby?`);
+            // Add AI message about the location
+            const matchedLocation = Object.keys(aiKnowledgeBase).find(key => 
+                location.keywords.some(kw => kw === key) || 
+                location.name.toLowerCase().includes(key)
+            );
+            
+            if (matchedLocation && aiKnowledgeBase[matchedLocation]) {
+                const responses = aiKnowledgeBase[matchedLocation].responses;
+                const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+                addAIMessage(randomResponse);
+            }
         }
 
         // AI Chat Functionality
@@ -257,6 +608,11 @@
         const chatForm = document.getElementById('chatForm');
         const chatInput = document.getElementById('chatInput');
         const chatMessages = document.getElementById('chatMessages');
+
+        const settingsButton = document.getElementById('settingsButton');
+        const settingsPanel = document.getElementById('settingsPanel');
+        const settingsOverlay = document.getElementById('settingsOverlay');
+        const closeSettings = document.getElementById('closeSettings');
 
         // Toggle Chat Drawer
         aiButton.addEventListener('click', () => {
@@ -275,20 +631,34 @@
             chatOverlay.classList.remove('active');
         });
 
+        // Toggle Settings Panel
+        settingsButton.addEventListener('click', () => {
+            settingsPanel.classList.add('active');
+            settingsOverlay.classList.add('active');
+        });
+
+        closeSettings.addEventListener('click', () => {
+            settingsPanel.classList.remove('active');
+            settingsOverlay.classList.remove('active');
+        });
+
+        settingsOverlay.addEventListener('click', () => {
+            settingsPanel.classList.remove('active');
+            settingsOverlay.classList.remove('active');
+        });
+
         // Chat Message Handler
         chatForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const message = chatInput.value.trim();
             
             if (message) {
-                // Add user message
                 addChatMessage(message, 'user');
                 chatInput.value = '';
 
-                // Simulate AI response
                 setTimeout(() => {
                     const aiResponse = generateAIResponse(message);
-                    addChatMessage(aiResponse, 'assistant');
+                    addAIMessage(aiResponse);
                 }, 500);
             }
         });
@@ -301,13 +671,13 @@
             if (sender === 'user') {
                 messageDiv.innerHTML = `
                     <div class="bg-gray-300 text-gray-800 p-3 rounded-lg text-sm ml-8 rounded-tr-none">
-                        ${text}
+                        ${escapeHtml(text)}
                     </div>
                 `;
             } else {
                 messageDiv.innerHTML = `
-                    <div class="bg-red-100 text-red-800 p-3 rounded-lg text-sm mr-8 rounded-tl-none">
-                        ${text}
+                    <div class="p-3 rounded-lg text-sm mr-8 rounded-tl-none text-white" style="background-color: var(--primary-color);">
+                        ${escapeHtml(text)}
                     </div>
                 `;
             }
@@ -321,24 +691,77 @@
             addChatMessage(text, 'assistant');
         }
 
-        // AI Response Generator
+        // Enhanced AI Response Generator
         function generateAIResponse(userMessage) {
-            const responses = {
-                'history': 'Tbilisi has a rich history spanning over 1,500 years. Founded in the 5th century, it became Georgia\'s capital and has been shaped by Persian, Ottoman, Russian, and modern influences.',
-                'culture': 'Georgian culture is vibrant and unique! From traditional polyphonic singing to the famous Georgian cuisine and wine, you\'ll find warmth and hospitality throughout Tbilisi.',
-                'food': 'Georgian cuisine is delicious! Try khachapuri (cheese-filled bread), khinkali (dumplings), and local wines. The food reflects centuries of cultural exchange.',
-                'monastery': 'Tbilisi has several beautiful monasteries, including Metekhi Church and Sameba Cathedral. They showcase Georgian religious architecture and spirituality.',
-                'transport': 'The metro, buses, and minibuses are affordable ways to explore the city. The Mtatsminda Funicular is both a transport and a tourist attraction with amazing views.',
-                'default': 'That\'s an interesting question about Tbilisi! I recommend visiting the locations on the map to experience Georgian culture firsthand. Each site tells a unique story of our heritage.'
-            };
-
             const lowerMessage = userMessage.toLowerCase();
-            for (const [key, response] of Object.entries(responses)) {
-                if (key !== 'default' && lowerMessage.includes(key)) {
-                    return response;
+
+            // Check location-specific knowledge
+            for (const [key, data] of Object.entries(aiKnowledgeBase)) {
+                if (key !== 'default' && data.triggers) {
+                    for (const trigger of data.triggers) {
+                        if (lowerMessage.includes(trigger)) {
+                            const responses = data.responses;
+                            return responses[Math.floor(Math.random() * responses.length)];
+                        }
+                    }
                 }
             }
-            return responses.default;
+
+            // Default response
+            const defaultResponses = aiKnowledgeBase.default.responses;
+            return defaultResponses[Math.floor(Math.random() * defaultResponses.length)];
+        }
+
+        // Theme Customization
+        function setThemeColor(primary, dark, light) {
+            document.documentElement.style.setProperty('--primary-color', primary);
+            document.documentElement.style.setProperty('--primary-dark', dark);
+            document.documentElement.style.setProperty('--primary-light', light);
+
+            // Update color picker active state
+            document.querySelectorAll('.color-picker-circle').forEach(circle => {
+                circle.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Save preference
+            localStorage.setItem('themeColor', JSON.stringify({ primary, dark, light }));
+        }
+
+        // Load saved theme on page load
+        window.addEventListener('load', () => {
+            const savedTheme = localStorage.getItem('themeColor');
+            if (savedTheme) {
+                const { primary, dark, light } = JSON.parse(savedTheme);
+                setThemeColor(primary, dark, light);
+            }
+        });
+
+        // Helper function to escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Helper functions
+        function closeStoryCard() {
+            // On mobile, collapse the story card
+            const storyCard = document.querySelector('.story-card');
+            storyCard.style.maxHeight = '0';
+            setTimeout(() => { storyCard.style.maxHeight = ''; }, 500);
+        }
+
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            settingsPanel.classList.remove('active');
+            settingsOverlay.classList.remove('active');
+        }
+
+        function centerMapOnTbilisi() {
+            map.setView([41.7151, 44.7910], 13);
+            settingsPanel.classList.remove('active');
+            settingsOverlay.classList.remove('active');
         }
 
         // Initialize with first location
