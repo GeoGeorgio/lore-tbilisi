@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lore: Tbilisi - Cultural Journey</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+    
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    
+    <style>
+        #map {
+            height: 100vh;
+            width: 100%;
+        }
+        
+        .story-card {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .chat-drawer {
+            transition: transform 0.3s ease-in-out;
+            transform: translateX(100%);
+        }
+        
+        .chat-drawer.active {
+            transform: translateX(0);
+        }
+        
+        .chat-overlay {
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+        }
+        
+        .chat-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .marker-icon {
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: white;
+            border: 3px solid #d32f2f;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s;
+        }
+        
+        .marker-icon:hover {
+            transform: scale(1.1);
+        }
+        
+        .floating-button {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 40;
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .message-bubble {
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .story-card h2 {
+            color: #d32f2f;
+        }
+
+        .story-card h3 {
+            color: #333;
+        }
+    </style>
+</head>
+<body class="bg-gray-900">
+    <!-- Leaflet Map Container -->
+    <div id="map"></div>
+
+    <!-- Story Card (Bottom Left) -->
+    <div class="absolute bottom-6 left-6 w-80 story-card rounded-lg shadow-2xl p-6 z-20 max-h-96 overflow-y-auto">
+        <h2 class="text-2xl font-bold mb-2" id="storyTitle">Welcome to Tbilisi</h2>
+        <p class="text-gray-700 text-sm mb-4" id="storyDescription">
+            Click on any marker on the map to explore the rich cultural heritage of Georgia's capital city.
+        </p>
+        <div id="storyDetails" class="text-gray-600 text-xs space-y-2">
+            <p><strong>Coordinates:</strong> <span id="storyCoords">41.7151°N, 44.7910°E</span></p>
+        </div>
+    </div>
+
+    <!-- Floating AI Culture Guide Button -->
+    <button class="floating-button bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-full shadow-lg flex items-center gap-2 transition-colors"
+            id="aiButton" aria-label="Open AI Culture Guide">
+        <span>🇬🇪</span>
+        <span class="text-sm">Ask AI</span>
+    </button>
+
+    <!-- Chat Drawer Overlay -->
+    <div class="chat-overlay" id="chatOverlay"></div>
+
+    <!-- Chat Drawer -->
+    <div class="chat-drawer fixed right-0 top-0 h-full w-96 bg-white shadow-2xl rounded-l-lg flex flex-col z-50" id="chatDrawer">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-red-600 to-red-700 text-white p-4 rounded-tl-lg flex justify-between items-center">
+            <h3 class="text-lg font-bold flex items-center gap-2">
+                <span>🇬🇪</span> AI Culture Guide
+            </h3>
+            <button class="text-white hover:bg-red-800 p-2 rounded transition-colors" id="closeChat" aria-label="Close chat">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <!-- Messages Container -->
+        <div class="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50" id="chatMessages">
+            <div class="message-bubble">
+                <div class="bg-red-100 text-red-800 p-3 rounded-lg text-sm">
+                    <p class="font-semibold mb-1">Welcome to Lore: Tbilisi!</p>
+                    <p>I'm your AI Culture Guide. Ask me anything about the locations on the map, Georgian history, culture, or local recommendations. Click any marker to start learning!</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="border-t border-gray-200 p-4 bg-white rounded-bl-lg">
+            <form class="flex gap-2" id="chatForm">
+                <input type="text" id="chatInput" placeholder="Ask about Tbilisi..." 
+                       class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                       aria-label="Chat input">
+                <button type="submit" class="bg-red-600 hover:bg-red-700 text-white p-2 rounded-lg transition-colors" aria-label="Send message">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+    <script>
+        // Tbilisi Locations Data
+        const locations = [
+            {
+                name: "Abanotubani",
+                coords: [41.7151, 44.7910],
+                icon: "🛁",
+                description: "Ancient sulfur bathhouses nestled in the old town, a UNESCO World Heritage site. Known for their distinctive dome-shaped roofs.",
+                details: "The baths date back to the 5th century and remain one of Tbilisi's most iconic attractions."
+            },
+            {
+                name: "Narikala Fortress",
+                coords: [41.7169, 44.8084],
+                icon: "🏰",
+                description: "A 4th-century fortress overlooking the Old Town, symbolizing Tbilisi's protective spirit.",
+                details: "Offers panoramic views of the city and houses the Metekhi Church, dedicated to Saint George."
+            },
+            {
+                name: "Rezo Gabriadze Theater",
+                coords: [41.7155, 44.8050],
+                icon: "🎭",
+                description: "An iconic puppet theater with a striking clock tower, built by renowned Georgian artist Rezo Gabriadze.",
+                details: "Features intricate medieval-style architecture and hosts performances that blend art, history, and whimsy."
+            },
+            {
+                name: "Mtatsminda Funicular",
+                coords: [41.7119, 44.7995],
+                icon: "🎢",
+                description: "A scenic funicular railway providing breathtaking views of Tbilisi from an altitude of 770 meters.",
+                details: "The panoramic restaurant at the top offers 360-degree views of the city, Caucasus mountains, and surrounding landscape."
+            },
+            {
+                name: "Chronicle of Georgia Monument",
+                coords: [41.7133, 44.8230],
+                icon: "📜",
+                description: "A monumental sculpture depicting Georgian history from the 4th to 13th centuries, standing 38 meters tall.",
+                details: "Each of the 13 sculptured figures represents a different era in Georgia's rich medieval history."
+            }
+        ];
+
+        // Initialize Leaflet Map
+        const map = L.map('map').setView([41.7151, 44.7910], 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+
+        // Custom Marker Layer Group
+        const markerGroup = L.featureGroup().addTo(map);
+
+        // Create and Add Markers
+        locations.forEach((location, index) => {
+            const marker = L.marker(location.coords, {
+                title: location.name
+            }).addTo(markerGroup);
+
+            // Custom popup with location icon
+            marker.bindPopup(`<strong>${location.name}</strong>`, { closeButton: false });
+
+            // Click handler to update story card
+            marker.on('click', () => {
+                updateStoryCard(location);
+            });
+
+            // Add click event listener directly
+            marker.addEventListener = marker.on; // Compatibility layer
+        });
+
+        // Update Story Card Function
+        function updateStoryCard(location) {
+            document.getElementById('storyTitle').textContent = `${location.icon} ${location.name}`;
+            document.getElementById('storyDescription').textContent = location.description;
+            document.getElementById('storyCoords').textContent = `${location.coords[0].toFixed(4)}°N, ${location.coords[1].toFixed(4)}°E`;
+            
+            const detailsDiv = document.getElementById('storyDetails');
+            detailsDiv.innerHTML = `
+                <p><strong>Coordinates:</strong> ${location.coords[0].toFixed(4)}°N, ${location.coords[1].toFixed(4)}°E</p>
+                <p class="mt-3"><strong>About:</strong> ${location.details}</p>
+            `;
+
+            // Add AI suggestion
+            addAIMessage(`Explore ${location.name}! This location represents an important piece of Tbilisi's cultural heritage. Would you like to know more about its history or local recommendations nearby?`);
+        }
+
+        // AI Chat Functionality
+        const aiButton = document.getElementById('aiButton');
+        const chatDrawer = document.getElementById('chatDrawer');
+        const chatOverlay = document.getElementById('chatOverlay');
+        const closeChat = document.getElementById('closeChat');
+        const chatForm = document.getElementById('chatForm');
+        const chatInput = document.getElementById('chatInput');
+        const chatMessages = document.getElementById('chatMessages');
+
+        // Toggle Chat Drawer
+        aiButton.addEventListener('click', () => {
+            chatDrawer.classList.add('active');
+            chatOverlay.classList.add('active');
+            chatInput.focus();
+        });
+
+        closeChat.addEventListener('click', () => {
+            chatDrawer.classList.remove('active');
+            chatOverlay.classList.remove('active');
+        });
+
+        chatOverlay.addEventListener('click', () => {
+            chatDrawer.classList.remove('active');
+            chatOverlay.classList.remove('active');
+        });
+
+        // Chat Message Handler
+        chatForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const message = chatInput.value.trim();
+            
+            if (message) {
+                // Add user message
+                addChatMessage(message, 'user');
+                chatInput.value = '';
+
+                // Simulate AI response
+                setTimeout(() => {
+                    const aiResponse = generateAIResponse(message);
+                    addChatMessage(aiResponse, 'assistant');
+                }, 500);
+            }
+        });
+
+        // Add Chat Message to UI
+        function addChatMessage(text, sender) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message-bubble';
+            
+            if (sender === 'user') {
+                messageDiv.innerHTML = `
+                    <div class="bg-gray-300 text-gray-800 p-3 rounded-lg text-sm ml-8 rounded-tr-none">
+                        ${text}
+                    </div>
+                `;
+            } else {
+                messageDiv.innerHTML = `
+                    <div class="bg-red-100 text-red-800 p-3 rounded-lg text-sm mr-8 rounded-tl-none">
+                        ${text}
+                    </div>
+                `;
+            }
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Add AI Message Helper
+        function addAIMessage(text) {
+            addChatMessage(text, 'assistant');
+        }
+
+        // AI Response Generator
+        function generateAIResponse(userMessage) {
+            const responses = {
+                'history': 'Tbilisi has a rich history spanning over 1,500 years. Founded in the 5th century, it became Georgia\'s capital and has been shaped by Persian, Ottoman, Russian, and modern influences.',
+                'culture': 'Georgian culture is vibrant and unique! From traditional polyphonic singing to the famous Georgian cuisine and wine, you\'ll find warmth and hospitality throughout Tbilisi.',
+                'food': 'Georgian cuisine is delicious! Try khachapuri (cheese-filled bread), khinkali (dumplings), and local wines. The food reflects centuries of cultural exchange.',
+                'monastery': 'Tbilisi has several beautiful monasteries, including Metekhi Church and Sameba Cathedral. They showcase Georgian religious architecture and spirituality.',
+                'transport': 'The metro, buses, and minibuses are affordable ways to explore the city. The Mtatsminda Funicular is both a transport and a tourist attraction with amazing views.',
+                'default': 'That\'s an interesting question about Tbilisi! I recommend visiting the locations on the map to experience Georgian culture firsthand. Each site tells a unique story of our heritage.'
+            };
+
+            const lowerMessage = userMessage.toLowerCase();
+            for (const [key, response] of Object.entries(responses)) {
+                if (key !== 'default' && lowerMessage.includes(key)) {
+                    return response;
+                }
+            }
+            return responses.default;
+        }
+
+        // Initialize with first location
+        document.addEventListener('DOMContentLoaded', () => {
+            updateStoryCard(locations[0]);
+        });
+    </script>
+</body>
+</html>
